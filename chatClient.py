@@ -7,6 +7,15 @@ import socket, threading, select, re, time
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QDialog, QInputDialog, QSplitter, QMainWindow, QPushButton, QLabel, QTextEdit, QStyle, QStyleFactory
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 
+
+class ListenThread(QThread):
+    signal = pyqtSignal(object)
+
+    def __init__(self, socket):
+        QThread.__init__(self, socket)
+        self.socket = socket
+
+
 # Setup for GUI
 class Application():
     def __init__(self):
@@ -33,34 +42,40 @@ class Application():
         self.host_button.setStyleSheet("font:bold; color: rgb(153, 170, 181); background-color: rgb(44, 47, 51); font-size: 12px")
         self.host_button.setStyle(QStyleFactory.create('Fusion'))
         self.host_button.setFixedHeight(40)
+        #self.host_button.clicked.join(self.host)
 
         # Join Button
         self.join_button = QPushButton("Join")
         self.join_button.setStyleSheet("font:bold; color: rgb(153, 170, 181); background-color: rgb(44, 47, 51); font-size: 12px")
         self.join_button.setStyle(QStyleFactory.create('Fusion'))
         self.join_button.setFixedHeight(40)
+        #self.join_button.clicked.join(self.join)
 
         # Disconnect Button
         self.disconnect_button = QPushButton("Disconnect")
         self.disconnect_button.setStyleSheet("font:bold; color: rgb(153, 170, 181); background-color: rgb(44, 47, 51); font-size: 12px")
         self.disconnect_button.setStyle(QStyleFactory.create('Fusion'))
         self.disconnect_button.setFixedHeight(40)
+        #self.disconnect_button.clicked.disconnect(self.disconnect)
 
         # Send Button
         self.send_button = QPushButton("Send")
         self.send_button.setStyleSheet("font:bold; color: rgb(153, 170, 181); background-color: rgb(44, 47, 51); font-size: 12px")
         self.send_button.setStyle(QStyleFactory.create('Fusion'))
-        self.send_button.setFixedHeight(40)
+        self.send_button.setFixedHeight(50)
+        #self.send_button.clicked.send_mes(self.send_mes)
 
         # Clear Chat Button
         self.clear_button = QPushButton("Clear Chat")
         self.clear_button.setStyleSheet("font:bold; color: rgb(153, 170, 181); background-color: rgb(44, 47, 51); font-size: 12px")
         self.clear_button.setStyle(QStyleFactory.create('Fusion'))
         self.clear_button.setFixedHeight(40)
+        #self.clear_button.clicked.clear_chat(self.clear_chat)
 
         ''' Layouts '''
-        splitV = QSplitter(Qt.Vertical)
-        splitH = QSplitter(Qt.Horizontal)
+
+        splitV = QSplitter(Qt.Vertical)     # Vertical splitter
+        splitH = QSplitter(Qt.Horizontal)   # Horizontal splitter
 
         # Chat Layout
         chat_layout = QVBoxLayout()
@@ -93,8 +108,32 @@ class Application():
         self.window.setWindowTitle("Chat Client")
         self.window.show()
 
+    # Function to set up a connection
+    def host(self):
+        pass
+
+    # Function to join an open connection
+    def join(self):
+        pass
+
+    # Function to disconnect from current session
+    def disconnect(self):
+        pass
+
+    # Function that brings application back to unconnected state
+    def close_connection(self):
+        pass
+
+    # Function to send a message
+    def send_mes(self):
+        pass
+
+    # Function to clear the chat window
+    def clear_chat(self):
+        pass
+
+
 
 app = Application()
-app.q_app.exec_()
-
-
+app.q_app.exec_()   
+app.socket(close)  
