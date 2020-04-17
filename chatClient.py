@@ -4,7 +4,7 @@ A simple peer-to-peer chat application
 Author: Kyle VanDenHeuvel
 '''
 import socket, threading, select, re, time, sys, traceback
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QMessageBox, QVBoxLayout, QHBoxLayout, QDialog, QInputDialog, QSplitter, QMainWindow, QPushButton, QLabel, QTextEdit, QLineEdit, QStyle, QStyleFactory
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QMessageBox, QVBoxLayout, QHBoxLayout, QDialog, QInputDialog, QSplitter, QMainWindow, QTextEdit, QLineEdit, QStyle, QStyleFactory
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 
 
