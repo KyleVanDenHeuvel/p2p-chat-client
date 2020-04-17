@@ -8,6 +8,14 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QMessageBox, QVB
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 
 
+# A class to assist in sending messages
+class mess_text(QLineEdit):
+    def __init__(self, callback):
+        self.enter_callback = callback
+        super().__init__()
+
+
+# Overwrites a method in QThread
 class Listener(QThread):
     signal = pyqtSignal(object)
 
@@ -19,10 +27,11 @@ class Listener(QThread):
         with self.socket:
             while(True):
                 try:
-                    message = self.socket.recv(20480).decode()
+                    message = self.socket.recv(32000).decode()
                 except:
                     self.socket.close()
                     traceback.print_exc(file=sys.stdout)
+                    return
                 if message == "<<<END CONNECTION>>>":
                     self.socket.sendall("<<<END CONNECTION>>>".encode())
                     self.socket.close()
@@ -46,15 +55,22 @@ class Application():
         self.chat_text.setStyleSheet("background-color: rgb(44, 47, 51); border-radius: 5px; height: 50px; color: rgb(153, 170, 181); font-size: 14px")
         self.chat_text.setStyle(QStyleFactory.create('Fusion'))
         self.chat_text.setReadOnly(True)
-        self.chat_text.insertHtml("<p style=\"text-align: center;\"><strong><span style=\"font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: rgb(153, 170, 181);\">Connect or Host</span></strong></p>")
         self.chat_text.insertPlainText("\n")
 
         # Message terminal
-        self.message_term = QTextEdit()
+        self.message_term = mess_text(self.send_mes)
         self.message_term.setStyleSheet("background-color: rgb(44, 47, 51); border-radius: 5px; height: 50px; color: rgb(153, 170, 181); font-size: 14px")
         self.message_term.setReadOnly(False)
         self.message_term.setStyle(QStyleFactory.create('Fusion'))
         self.message_term.setFixedHeight(50)
+
+        # Chat Status
+        self.chat_status = QTextEdit()
+        self.chat_status.setStyleSheet("background-color: rgb(44, 47, 51); border-radius: 5px; height: 50px; color: rgb(153, 170, 181); font-size: 14px")
+        self.chat_status.setReadOnly(True)
+        self.chat_status.setStyle(QStyleFactory.create('Fusion'))
+        self.chat_status.insertHtml("<p style=\"text-align: center;\"><strong><span style=\"font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: rgb(153, 170, 181);\">Connect or Host</span></strong></p>")
+        self.chat_status.setFixedHeight(30)
 
         # Host Button
         self.host_button = QPushButton("Host")
@@ -109,6 +125,8 @@ class Application():
 
         # Message Layout
         mes_layout = QVBoxLayout()
+        mes_layout.addWidget(self.chat_status)
+        mes_layout.addWidget(splitH)
         mes_layout.addWidget(self.chat_text)
         mes_layout.addWidget(splitH)
         mes_layout.addWidget(self.message_term)
@@ -144,21 +162,24 @@ class Application():
             self.connected = True
 
             try:
+
+                # Prompt waiting for other user
+                self.chat_status.setText("Waiting for connection")
+
                 # Starting server
                 self.socket.bind(("0.0.0.0", int(port_num)))
                 self.socket.listen()
                 other, client = self.socket.accept()
                 self.socket.close()
-                self.socket = client
+                self.socket = other
 
                 # Message for established connection
-                self.chat_text.setText("Established connection with " + str(client))
-                self.chat_text.insertPlainText("\"")
+                self.chat_status.setText("Established connection with " + str(client))
 
                 # Listening
                 self.listen = Listener(other)
                 self.listen.start()
-                self.listen.finished.connect(self.disconnect)
+                self.listen.finished.connect(self.close_connection)
                 self.listen.signal.connect(self.create_mes)
 
             except:
@@ -177,30 +198,35 @@ class Application():
         host_ip, status = QInputDialog().getText(self.window, "Join", "Provide IP and Port (format: IP:port)", QLineEdit.Normal)
         host_info = host_ip.split(':')
 
+        # Checks to see if port is included, and if it is, if it is a number
         if status and not (len(host_info) == 2 and host_info[1].isdigit()):
             self.join()
 
+        # Checks to ensure proper IP address format
         elif status:
             try:
                 socket.inet_aton(host_info[0])
             except socket.error:
                 self.join()
 
-        elif status and not (len(host_info) == 2 and host_info[1] in range(1023, 65536)):
+        # Checks to ensure the port is within proper range
+        elif status and not (len(host_info) == 2 and (1024 <= host_info[1] <= 65535)):
             self.join()
 
+        # If formatted correctly, attempt to connect
         if status and host_ip:
-            self.chat_text.setText("Connecting to chat server")
 
             try:
-                self.socket.connect((host_info[0], host_info[1]))
-                self.chat_text.insertPlainText("Connected to " + host_info[0] + "\n")
+                # Attempt to connect to other client
+                self.socket.connect((host_info[0], int(host_info[1])))
+                self.chat_status.setText("Connected to " + host_info[0])
 
                 self.connected = True
 
+                # Listening
                 self.listen = Listener(self.socket)
                 self.listen.start()
-                self.listen.finished.connect(self.disconnect)
+                self.listen.finished.connect(self.close_connection)
                 self.listen.signal.connect(self.create_mes)
 
             except Exception:
@@ -209,8 +235,8 @@ class Application():
                 bad_connect.setStyle(QStyleFactory.create("Fusion"))
                 bad_connect.setStyleSheet("font:bold; color: rgb(153, 170, 181); background-color: rgb(44, 47, 51); font-size: 12px")
                 bad_connect.exec()
-                self.chat_text.setText("")
-                self.chat_text.insertHtml("<p style=\"text-align: center;\"><strong><span style=\"font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: rgb(153, 170, 181);\">Connect or Host</span></strong></p>")
+                self.chat_status.setText("")
+                self.chat_status.insertHtml("<p style=\"text-align: center;\"><strong><span style=\"font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: rgb(153, 170, 181);\">Connect or Host</span></strong></p>")
                 traceback.print_exc(file=sys.stdout)
 
 
@@ -229,13 +255,11 @@ class Application():
 
     # Function that brings application back to unconnected state
     def close_connection(self):
-        self.chat_text.insertHtml("<p style=\"text-align: center;\"><strong><span style=\"font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: rgb(153, 170, 181);\">Closing connection</span></strong></p>")
-        self.chat_text.insertPlainText("\n")
+        self.chat_status.insertHtml("<p style=\"text-align: center;\"><strong><span style=\"font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: rgb(153, 170, 181);\">Closing connection</span></strong></p>")
         self.socket.close()
         self.connected = False
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        self.chat_text.setText("<p style=\"text-align: center;\"><strong><span style=\"font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: rgb(153, 170, 181);\">P2P Chat Client</span></strong></p>")
+        self.chat_status.setText("<p style=\"text-align: center;\"><strong><span style=\"font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: rgb(153, 170, 181);\">Connect or Host</span></strong></p>")
 
 
     # Function to create a message
@@ -249,11 +273,11 @@ class Application():
         # Check to see if connection is established
         if self.connected:
             # Send user message to chat window
-            self.chat_text.insertHtml("<font color=rgb(153, 170, 181)><b>Me</b>" + self.message_term.text() + "</font>")
+            self.chat_text.insertHtml("<b>Me: </b>" + self.message_term.text())
             self.chat_text.insertPlainText("\n")
 
             # Send message across client
-            self.socket.sendall(("<b>Person</b>" + self.message_term()).encode())
+            self.socket.sendall(("<b>Person: </b>" + self.message_term.text()).encode())
 
             # Clear message terminal
             self.message_term.setText("")
